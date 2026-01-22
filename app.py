@@ -439,7 +439,7 @@ def init_session_state():
         'auto_download': False,
         
         # App version for debugging
-        'app_version': '2.1.0'
+        'app_version': '2.5.0 (Sanitized)'
     }
     
     for key, default_value in defaults.items():
@@ -680,7 +680,7 @@ def render_sidebar():
     """Render the sidebar with model selection, mode, and customization controls"""
     with st.sidebar:
         # Logo/Title
-        st.markdown("### 🛠️ MGA Agent")
+        st.markdown("### 🛠️ MGA Agent v2.5")
         st.caption("Generador de Documentos")
         
         # User info and logout
