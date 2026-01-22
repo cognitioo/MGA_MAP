@@ -694,14 +694,24 @@ def render_sidebar():
             
             # Connection Test Button
             if st.button("⚡ Probar Conexión", key="test_conn_btn", use_container_width=True):
-                with st.spinner("Probando API..."):
+                with st.spinner("Probando APIs..."):
+                    # Try Groq first
                     try:
                         from config import get_llm
                         llm = get_llm("groq")
                         res = llm.invoke("Hello")
-                        st.success(f"✅ Conexión Exitosa: {res.content[:20]}...")
+                        st.success(f"✅ Groq OK: {res.content[:20]}...")
                     except Exception as e:
-                        st.error(f"❌ Error de Conexión: {str(e)}")
+                        st.error(f"❌ Groq Error: {str(e)[:100]}")
+                        
+                        # Try Gemini as fallback
+                        try:
+                            llm_gemini = get_llm("gemini")
+                            res_g = llm_gemini.invoke("Hello")
+                            st.success(f"✅ Gemini OK: {res_g.content[:20]}...")
+                            st.info("💡 Considere usar Gemini como modelo principal")
+                        except Exception as ge:
+                            st.error(f"❌ Gemini Error: {str(ge)[:100]}")
         else:
             st.error("🔑 No API Key Found!")
         
