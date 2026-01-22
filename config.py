@@ -81,6 +81,12 @@ OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = get_secret("ANTHROPIC_API_KEY")
 GROQ_API_KEY = get_secret("GROQ_API_KEY")
 
+# Explicitly set env vars for libraries that might rely on them
+if GROQ_API_KEY: os.environ["GROQ_API_KEY"] = GROQ_API_KEY
+if GOOGLE_API_KEY: os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+if OPENAI_API_KEY: os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+if ANTHROPIC_API_KEY: os.environ["ANTHROPIC_API_KEY"] = ANTHROPIC_API_KEY
+
 # --- Database ---
 DATABASE_PATH = os.path.join(os.path.dirname(__file__), "database", "mga_agent.db")
 

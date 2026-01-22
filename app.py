@@ -688,11 +688,20 @@ def render_sidebar():
         role_emoji = "👑" if user_role == "admin" else "👤"
         st.markdown(f"**{role_emoji} Rol: {user_role.title()}**")
         
-        # DEBUG: Show loaded API Key prefix
-        from config import GROQ_API_KEY
         if GROQ_API_KEY:
             safe_key = GROQ_API_KEY[:10] + "..." if len(GROQ_API_KEY) > 10 else "Short/Invalid"
             st.caption(f"🔑 Key Loaded: `{safe_key}`")
+            
+            # Connection Test Button
+            if st.button("⚡ Probar Conexión", key="test_conn_btn", use_container_width=True):
+                with st.spinner("Probando API..."):
+                    try:
+                        from config import get_llm
+                        llm = get_llm("groq")
+                        res = llm.invoke("Hello")
+                        st.success(f"✅ Conexión Exitosa: {res.content[:20]}...")
+                    except Exception as e:
+                        st.error(f"❌ Error de Conexión: {str(e)}")
         else:
             st.error("🔑 No API Key Found!")
         
