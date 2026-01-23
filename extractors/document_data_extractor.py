@@ -38,6 +38,78 @@ except ImportError:
     openpyxl = None
 
 
+def clean_text_for_summarization(text: str, max_chars: int = 12000) -> str:
+    """
+    Clean extracted text to reduce token usage before AI summarization.
+    
+    Removes:
+    - Common headers/footers (page numbers, print dates, platform names)
+    - Excessive whitespace
+    - Duplicated lines (appearing 3+ times)
+    - Table grid characters
+    
+    Args:
+        text: Raw extracted text
+        max_chars: Maximum characters to return
+        
+    Returns:
+        Cleaned text, capped at max_chars
+    """
+    if not text:
+        return ""
+    
+    # Stage 1: Remove common waste patterns
+    waste_patterns = [
+        r'Página \d+ de \d+',                      # Page numbers
+        r'Impreso el \d{1,2}/\d{1,2}/\d{4}.*',     # Print dates
+        r'Departamento Nacional de Planeación',    # Repeated header
+        r'MGA Web.*',                              # Platform name
+        r'^\s*\|\s*$',                             # Empty table rows
+        r'-{5,}',                                  # Horizontal lines (5+ dashes)
+        r'_{5,}',                                  # Underscores
+        r'\*{5,}',                                 # Asterisks
+        r'www\.[a-zA-Z0-9.-]+\.[a-z]+',           # URLs
+        r'Versión \d+\.\d+',                       # Version numbers
+    ]
+    
+    for pattern in waste_patterns:
+        text = re.sub(pattern, '', text, flags=re.MULTILINE | re.IGNORECASE)
+    
+    # Stage 2: Normalize whitespace
+    text = re.sub(r'\n{3,}', '\n\n', text)   # Max 2 consecutive newlines
+    text = re.sub(r'[ \t]+', ' ', text)       # Collapse multiple spaces/tabs
+    text = re.sub(r' +\n', '\n', text)        # Remove trailing spaces
+    
+    # Stage 3: Remove duplicate lines (appearing 3+ times)
+    from collections import Counter
+    lines = text.split('\n')
+    line_counts = Counter(lines)
+    unique_lines = []
+    seen_duplicates = set()
+    
+    for line in lines:
+        stripped = line.strip()
+        if len(stripped) < 5:  # Keep short lines (might be spacing)
+            unique_lines.append(line)
+        elif line_counts[line] >= 3:
+            if stripped not in seen_duplicates:
+                unique_lines.append(line)
+                seen_duplicates.add(stripped)
+            # Skip additional occurrences
+        else:
+            unique_lines.append(line)
+    
+    text = '\n'.join(unique_lines)
+    
+    # Stage 4: Smart truncation - keep beginning (intro) + end (financials)
+    if len(text) > max_chars:
+        beginning = text[:int(max_chars * 0.7)]
+        end = text[-int(max_chars * 0.25):]
+        text = f"{beginning}\n\n[...contenido intermedio omitido...]\n\n{end}"
+    
+    return text.strip()
+
+
 class DocumentDataExtractor:
     """Extract data from uploaded documents to fill forms"""
     
@@ -559,8 +631,10 @@ Responde SOLO con JSON válido, sin explicaciones."""
     try:
         chain = prompt | llm_cheap | StrOutputParser()
         
-        # Use full text (Gemini Flash handles large context)
-        response = chain.invoke({"full_text": full_text[:50000]})  # Cap at 50k chars just in case
+        # Clean text before sending to AI (removes waste, reduces tokens)
+        cleaned_text = clean_text_for_summarization(full_text, max_chars=12000)
+        
+        response = chain.invoke({"full_text": cleaned_text})
         
         # Parse JSON response
         json_patterns = [

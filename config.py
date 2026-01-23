@@ -62,8 +62,8 @@ LLM_PROVIDERS = {
         "env_key": "GOOGLE_API_KEY",
     },
     "gemini_flash_summarizer": {
-        "name": "Gemini Flash Summarizer (Cheap)",
-        "model": "moonshotai/kimi-k2-instruct-0905",
+        "name": "Groq Summarizer (Cheap + High TPM)",
+        "model": "gemma2-9b-it",  # 15k TPM limit - 2.5x more than llama-3.1-8b
         "env_key": "GROQ_API_KEY",
         "temperature": 0.1,  # Low temp for factual extraction
     },
