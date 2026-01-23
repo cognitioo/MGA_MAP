@@ -63,7 +63,7 @@ LLM_PROVIDERS = {
     },
     "gemini_flash_summarizer": {
         "name": "Gemini Flash Summarizer (Cheap)",
-        "model": "llama-3.1-8b-instant",
+        "model": "moonshotai/kimi-k2-instruct-0905",
         "env_key": "GROQ_API_KEY",
         "temperature": 0.1,  # Low temp for factual extraction
     },
