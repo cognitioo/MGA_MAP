@@ -63,7 +63,7 @@ LLM_PROVIDERS = {
     },
     "gemini_flash_summarizer": {
         "name": "Groq Summarizer (Cheap + High TPM)",
-        "model": "gemma2-9b-it",  # 15k TPM limit - 2.5x more than llama-3.1-8b
+        "model": "meta-llama/llama-4-scout-17b-16e-instruct",  # 30k TPM limit
         "env_key": "GROQ_API_KEY",
         "temperature": 0.1,  # Low temp for factual extraction
     },
