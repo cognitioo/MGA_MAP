@@ -151,6 +151,15 @@ def get_llm(provider: str = None):
             google_api_key=GOOGLE_API_KEY,
             temperature=0.1,  # Lower temp for extraction
         )
+    elif provider == "gemini_flash_summarizer":
+        # Uses Groq's fast Llama model for cheap summarization
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=LLM_PROVIDERS["gemini_flash_summarizer"]["model"],
+            api_key=GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1",
+            temperature=LLM_PROVIDERS["gemini_flash_summarizer"].get("temperature", 0.1),
+        )
     elif provider == "openai":
         from langchain_openai import ChatOpenAI
         return ChatOpenAI(
