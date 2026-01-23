@@ -447,3 +447,157 @@ def extract_data_from_upload(uploaded_file, doc_type: str, llm=None, user_contex
     
     extractor = DocumentDataExtractor(llm=llm)
     return extractor.extract_from_file(uploaded_file, ext, doc_type, user_context=user_context)
+
+
+def summarize_development_plan(uploaded_file, llm_cheap=None) -> Dict[str, Any]:
+    """
+    Summarize a Development Plan PDF using a cheap model for token efficiency.
+    
+    This function extracts the full text from a PDF, then uses a cheap LLM
+    (Gemini Flash with temp=0.1) to create a structured JSON summary.
+    
+    Args:
+        uploaded_file: Streamlit UploadedFile object (PDF)
+        llm_cheap: Optional LLM for summarization (default: gemini_flash_summarizer)
+        
+    Returns:
+        Dictionary with structured summary:
+        {
+            "resumen_global": "Short overview...",
+            "paginas_relevantes": [...],
+            "datos_programa": {...},
+            "raw_text_length": int,
+            "summary_length": int
+        }
+    """
+    import hashlib
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.output_parsers import StrOutputParser
+    
+    if not uploaded_file:
+        return {"error": "No file provided"}
+    
+    # Get file extension
+    filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
+    ext = os.path.splitext(filename)[1].lower()
+    
+    if ext not in ['.pdf', 'pdf']:
+        return {"error": f"Expected PDF, got {ext}"}
+    
+    # Extract full text
+    extractor = DocumentDataExtractor(llm=None)  # No AI for extraction
+    
+    if hasattr(uploaded_file, 'read'):
+        content = uploaded_file.read()
+        uploaded_file.seek(0)
+    else:
+        with open(uploaded_file, 'rb') as f:
+            content = f.read()
+    
+    full_text = extractor._extract_pdf_text(content)
+    
+    if not full_text or len(full_text) < 100:
+        return {"error": "Could not extract text from PDF", "raw_text_length": len(full_text) if full_text else 0}
+    
+    # Generate document hash for caching
+    doc_hash = hashlib.md5(content).hexdigest()[:12]
+    
+    # Get cheap LLM if not provided
+    if not llm_cheap:
+        try:
+            from config import get_llm
+            llm_cheap = get_llm("gemini_flash_summarizer")
+        except Exception as e:
+            return {"error": f"Could not initialize summarizer: {e}", "raw_text_length": len(full_text)}
+    
+    # Summarization prompt
+    summarization_prompt = """Eres un experto en extracción de datos de Planes de Desarrollo colombianos.
+
+TAREA: Analiza este documento y extrae información estructurada para un proyecto MGA.
+
+DOCUMENTO COMPLETO:
+{full_text}
+
+EXTRAE en formato JSON estricto:
+
+{{
+    "resumen_global": "Resumen de 2-3 oraciones del plan completo (máximo 100 palabras)",
+    "paginas_relevantes": [
+        {{
+            "pagina": "Número o rango de página",
+            "seccion": "Nombre de la sección",
+            "contenido_clave": ["Dato 1", "Dato 2", "Dato 3"]
+        }}
+    ],
+    "datos_programa": {{
+        "codigos_programa": ["2402 - Nombre", "2403 - Nombre"],
+        "presupuestos": ["5,000,000,000 - Programa X"],
+        "metas": ["100km vías", "500 beneficiarios"],
+        "indicadores": ["Km construidos", "Familias atendidas"]
+    }},
+    "poblacion": {{
+        "total": "Número si se encuentra",
+        "urbana": "Número",
+        "rural": "Número"
+    }}
+}}
+
+REGLAS CRÍTICAS:
+1. Extrae SOLO datos factuales (números, nombres, códigos)
+2. NO inventes ni interpretes datos
+3. Prioriza: presupuestos, metas, indicadores, códigos de programa
+4. Máximo 400 palabras en total
+5. Si no encuentras un dato, omítelo (no pongas "No encontrado")
+
+Responde SOLO con JSON válido, sin explicaciones."""
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "Eres un asistente de extracción de datos. Responde SOLO en JSON válido."),
+        ("human", summarization_prompt)
+    ])
+    
+    try:
+        chain = prompt | llm_cheap | StrOutputParser()
+        
+        # Use full text (Gemini Flash handles large context)
+        response = chain.invoke({"full_text": full_text[:50000]})  # Cap at 50k chars just in case
+        
+        # Parse JSON response
+        json_patterns = [
+            r'```json\s*([\s\S]*?)\s*```',
+            r'```\s*([\s\S]*?)\s*```',
+            r'\{[\s\S]*\}',
+        ]
+        
+        for pattern in json_patterns:
+            match = re.search(pattern, response, re.DOTALL)
+            if match:
+                try:
+                    json_str = match.group(1) if '```' in pattern else match.group(0)
+                    result = json.loads(json_str)
+                    
+                    # Add metadata
+                    result["raw_text_length"] = len(full_text)
+                    result["summary_length"] = len(response)
+                    result["doc_hash"] = doc_hash
+                    result["success"] = True
+                    
+                    return result
+                except json.JSONDecodeError:
+                    continue
+        
+        # JSON parsing failed, return raw response
+        return {
+            "error": "Could not parse JSON from summarizer",
+            "raw_response": response[:500],
+            "raw_text_length": len(full_text),
+            "doc_hash": doc_hash
+        }
+        
+    except Exception as e:
+        return {
+            "error": f"Summarization failed: {str(e)}",
+            "raw_text_length": len(full_text),
+            "doc_hash": doc_hash
+        }
+

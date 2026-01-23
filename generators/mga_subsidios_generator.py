@@ -65,6 +65,65 @@ class MGASubsidiosGenerator:
         
         return {}
     
+    def _format_context(self, data: dict) -> str:
+        """
+        Format context data for AI prompts.
+        Uses structured summary if available (from dev_plan_summary),
+        otherwise falls back to raw context_dump with increased limit.
+        """
+        # Check for structured summary from Development Plan
+        dev_plan_summary = data.get("dev_plan_summary", {})
+        
+        if dev_plan_summary and dev_plan_summary.get("success"):
+            # Format structured summary into readable text
+            parts = []
+            
+            # Global summary
+            if dev_plan_summary.get("resumen_global"):
+                parts.append(f"RESUMEN PLAN DE DESARROLLO:\n{dev_plan_summary['resumen_global']}")
+            
+            # Program data
+            datos_prog = dev_plan_summary.get("datos_programa", {})
+            if datos_prog:
+                if datos_prog.get("codigos_programa"):
+                    parts.append(f"CÓDIGOS DE PROGRAMA: {', '.join(datos_prog['codigos_programa'])}")
+                if datos_prog.get("presupuestos"):
+                    parts.append(f"PRESUPUESTOS: {', '.join(datos_prog['presupuestos'])}")
+                if datos_prog.get("metas"):
+                    parts.append(f"METAS: {', '.join(datos_prog['metas'])}")
+                if datos_prog.get("indicadores"):
+                    parts.append(f"INDICADORES: {', '.join(datos_prog['indicadores'])}")
+            
+            # Population data
+            poblacion = dev_plan_summary.get("poblacion", {})
+            if poblacion:
+                if poblacion.get("total"):
+                    parts.append(f"POBLACIÓN TOTAL: {poblacion['total']}")
+            
+            # Relevant pages
+            paginas = dev_plan_summary.get("paginas_relevantes", [])
+            if paginas:
+                page_texts = []
+                for p in paginas[:5]:  # Max 5 pages
+                    contenido = p.get("contenido_clave", [])
+                    if contenido:
+                        page_texts.append(f"[Pág {p.get('pagina', '?')} - {p.get('seccion', '')}]: {', '.join(contenido[:5])}")
+                if page_texts:
+                    parts.append("DATOS POR PÁGINA:\n" + "\n".join(page_texts))
+            
+            # Add raw POAI context if available
+            poai_context = data.get("context_dump", "")
+            if poai_context:
+                parts.append(f"\nCONTEXTO POAI:\n{poai_context[:4000]}")  # 4k for POAI
+            
+            return "\n\n".join(parts)
+        
+        else:
+            # Fallback: use raw context_dump with increased limit (8000 chars)
+            raw_context = data.get("context_dump", "No disponible") or ""
+            return raw_context[:8000]
+    
+    
     def generate_complete(self, data: dict) -> dict:
         """
         Generate the complete MGA Subsidios document (all 24 pages)
@@ -92,7 +151,8 @@ class MGASubsidiosGenerator:
             "plan_nacional": data.get("plan_nacional", "(2022-2026) Colombia Potencia Mundial de la Vida"),
             "plan_departamental": data.get("plan_departamental", "Bolívar Me Enamora 2024-2027"),
             "plan_municipal": data.get("plan_municipal", "San Pablo Mejor 2024-2027"),
-            "context_dump": (data.get("context_dump", "No disponible") or "")[:3000]  # Truncate to avoid token limit
+            # Use structured summary if available (from cheap model), else raw dump (increased to 8000)
+            "context_dump": self._format_context(data)
         }
         
         # Generate pages 1-5

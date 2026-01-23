@@ -61,6 +61,12 @@ LLM_PROVIDERS = {
         "model": "gemini-2.0-flash",
         "env_key": "GOOGLE_API_KEY",
     },
+    "gemini_flash_summarizer": {
+        "name": "Gemini Flash Summarizer (Cheap)",
+        "model": "llama-3.1-8b-instant",
+        "env_key": "GROQ_API_KEY",
+        "temperature": 0.1,  # Low temp for factual extraction
+    },
     "openai": {
         "name": "OpenAI GPT-4",
         "model": "gpt-4-turbo-preview",
@@ -80,12 +86,6 @@ GOOGLE_API_KEY = get_secret("GOOGLE_API_KEY")
 OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = get_secret("ANTHROPIC_API_KEY")
 GROQ_API_KEY = get_secret("GROQ_API_KEY")
-
-# Explicitly set env vars for libraries that might rely on them
-if GROQ_API_KEY: os.environ["GROQ_API_KEY"] = GROQ_API_KEY
-if GOOGLE_API_KEY: os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
-if OPENAI_API_KEY: os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-if ANTHROPIC_API_KEY: os.environ["ANTHROPIC_API_KEY"] = ANTHROPIC_API_KEY
 
 # --- Database ---
 DATABASE_PATH = os.path.join(os.path.dirname(__file__), "database", "mga_agent.db")

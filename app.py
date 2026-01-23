@@ -1304,57 +1304,45 @@ def render_mga_subsidios_form():
         except Exception as e:
             st.error(f"❌ Error procesando POAI: {e}")
     
-    # Process Development Plan (PDF) - Extract relevant MGA content only
+    # Process Development Plan (PDF) - Use cheap model summarization
+    dev_plan_summary = {}
     if dev_plan_file:
         try:
-            import fitz  # PyMuPDF
-            import re
-            pdf = fitz.open(stream=dev_plan_file.read(), filetype="pdf")
+            from extractors.document_data_extractor import summarize_development_plan
             
-            # Extract all text first
-            full_text = ""
-            for page in pdf:
-                full_text += page.get_text()
+            # Progressive loading indicator
+            with st.spinner("📋 Resumiendo Plan de Desarrollo con IA... (esto ahorra tokens)"):
+                dev_plan_summary = summarize_development_plan(dev_plan_file)
             
-            # Smart extraction - focus on MGA-relevant content
-            relevant_sections = []
-            
-            # Keywords that indicate relevant MGA content
-            mga_keywords = [
-                r'plan\s+de\s+desarrollo',
-                r'programa',
-                r'subprograma', 
-                r'proyecto',
-                r'meta',
-                r'indicador',
-                r'objetivo',
-                r'estrategia',
-                r'eje\s+estratégico',
-                r'línea\s+estratégica',
-                r'sector',
-                r'presupuesto',
-                r'inversión',
-                r'producto',
-                r'componente',
-                r'diagnóstico',
-                r'problemática',
-                r'población',
-                r'beneficiarios'
-            ]
-            
-            # Extract paragraphs containing relevant keywords
-            paragraphs = full_text.split('\n\n')
-            for para in paragraphs:
-                para_lower = para.lower()
-                if any(re.search(kw, para_lower) for kw in mga_keywords):
-                    if len(para.strip()) > 30:  # Skip very short snippets
-                        relevant_sections.append(para.strip())
-            
-            # Join relevant content, limit to 50k chars max
-            dev_text = "\n\n".join(relevant_sections)[:50000]
-            
-            context_dump += f"\n\n=== PLAN DE DESARROLLO (filtrado: {len(dev_text):,} de {len(full_text):,} chars) ===\n{dev_text}"
-            extracted_summary.append(f"✅ Plan: {len(dev_text):,} chars (de {len(full_text):,})")
+            if dev_plan_summary.get("success"):
+                raw_len = dev_plan_summary.get("raw_text_length", 0)
+                sum_len = dev_plan_summary.get("summary_length", 0)
+                reduction = int((1 - sum_len / max(raw_len, 1)) * 100) if raw_len > 0 else 0
+                
+                extracted_summary.append(f"✅ Plan: {raw_len:,}→{sum_len:,} chars ({reduction}% reducción)")
+                
+                # Show summary preview in expander
+                with st.expander("📊 Resumen del Plan de Desarrollo (generado por IA)", expanded=False):
+                    if dev_plan_summary.get("resumen_global"):
+                        st.write(f"**Resumen:** {dev_plan_summary['resumen_global']}")
+                    
+                    datos_prog = dev_plan_summary.get("datos_programa", {})
+                    if datos_prog.get("codigos_programa"):
+                        st.write(f"**Programas:** {', '.join(datos_prog['codigos_programa'])}")
+                    if datos_prog.get("metas"):
+                        st.write(f"**Metas:** {', '.join(datos_prog['metas'][:3])}")
+            else:
+                # Fallback to basic extraction if summarization fails
+                st.warning(f"⚠️ Resumen falló: {dev_plan_summary.get('error', 'Unknown')}. Usando extracción básica.")
+                import fitz
+                dev_plan_file.seek(0)
+                pdf = fitz.open(stream=dev_plan_file.read(), filetype="pdf")
+                dev_text = ""
+                for page in pdf:
+                    dev_text += page.get_text()
+                context_dump += f"\n\n=== PLAN DE DESARROLLO ===\n{dev_text[:20000]}"
+                extracted_summary.append(f"✅ Plan: {len(dev_text):,} chars (básico)")
+                
         except Exception as e:
             st.error(f"❌ Error procesando Plan: {e}")
     
@@ -1441,7 +1429,8 @@ def render_mga_subsidios_form():
         "cargo": cargo,
         "sector": sector,
         "letterhead_file": letterhead_file,
-        "context_dump": context_dump  # ALL file content goes to AI
+        "context_dump": context_dump,  # POAI + additional file content
+        "dev_plan_summary": dev_plan_summary  # Structured summary from cheap model
     }
 
 
