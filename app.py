@@ -1034,7 +1034,21 @@ def render_analisis_sector_form():
     col1, col2 = st.columns(2)
     
     with col1:
-        sector = st.text_input("Sector *", placeholder="Ej: Saneamiento Básico, Agua Potable")
+        sector_options = [
+            "Vivienda, ciudad y territorio",
+            "Educación",
+            "Salud y protección social",
+            "Agricultura y desarrollo rural",
+            "Transporte",
+            "Agua potable y saneamiento básico",
+            "Cultura",
+            "Ambiente y desarrollo sostenible",
+            "Inclusión social y reconciliación",
+            "Deporte y recreación",
+            "Tecnología de la información",
+            "Otro"
+        ]
+        sector = st.selectbox("Sector *", sector_options, key="as_sector")
         codigo_ciiu = st.text_input("Código CIIU", placeholder="Ej: 7110 - Actividades de arquitectura e ingeniería")
     
     with col2:
@@ -1488,7 +1502,21 @@ def render_unified_form():
     
     col1, col2 = st.columns(2)
     with col1:
-        sector = st.text_input("Sector Económico", value=extracted.get("sector", ""), placeholder="Ej: Transporte / Saneamiento", key="uni_sector")
+        sector_options = [
+            "Vivienda, ciudad y territorio",
+            "Educación",
+            "Salud y protección social",
+            "Agricultura y desarrollo rural",
+            "Transporte",
+            "Agua potable y saneamiento básico",
+            "Cultura",
+            "Ambiente y desarrollo sostenible",
+            "Inclusión social y reconciliación",
+            "Deporte y recreación",
+            "Tecnología de la información",
+            "Otro"
+        ]
+        sector = st.selectbox("Sector Económico", sector_options, key="uni_sector")
         programa = st.text_input("Programa (DTS)", placeholder="Ej: 4002 - Usuarios beneficiados...", key="uni_programa")
     with col2:
         unspsc = st.text_input("Códigos UNSPSC", placeholder="Ej: 43210000, 72101500", key="uni_unspsc")

@@ -265,6 +265,22 @@ Contexto:
 3. Estima una cadena de valor lógica (Insumos -> Actividades -> Productos -> Resultados).
 4. Genera un flujo de caja simple basado en el Valor Total ${valor_total}.
 
+⚠️ **REGLA CRÍTICA DE COSTOS - MUY IMPORTANTE:**
+La cadena de valor DEBE cumplir con esta VALIDACIÓN MATEMÁTICA:
+- Suma de ACTIVIDADES de un producto = Costo del PRODUCTO
+- Suma de PRODUCTOS de un objetivo = Costo del OBJETIVO
+- Suma de OBJETIVOS = Valor Total: ${valor_total}
+
+EJEMPLO DE CÁLCULO CORRECTO:
+Si valor_total = 100,000,000:
+- Objetivo 1: 100,000,000
+  - Producto 1.1: 60,000,000
+    - Actividad 1.1.1: 30,000,000
+    - Actividad 1.1.2: 30,000,000
+  - Producto 1.2: 40,000,000
+    - Actividad 1.2.1: 20,000,000
+    - Actividad 1.2.2: 20,000,000
+
 RESPONDE CON JSON VÁLIDO:
 
 {{
