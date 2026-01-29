@@ -738,9 +738,13 @@ def render_sidebar():
         
         generation_mode = st.radio(
             "Seleccione modo:",
-            options=["crear_nuevo", "actualizar_existente"],
-            format_func=lambda x: "Crear desde cero" if x == "crear_nuevo" else "Actualizar existente",
-            help="Crear nuevo: Genera documento completo con datos POAI. Actualizar: Modifica documento existente.",
+            options=["crear_nuevo", "actualizar_existente", "generar_desde_mga"],
+            format_func=lambda x: {
+                "crear_nuevo": "🆕 Crear desde cero",
+                "actualizar_existente": "✏️ Actualizar existente",
+                "generar_desde_mga": "📄 Generar documentos desde MGA"
+            }.get(x, x),
+            help="Crear nuevo: Genera MGA completo. Actualizar: Modifica existente. Desde MGA: Genera Análisis Sector/Estudios Previos.",
             label_visibility="collapsed"
         )
         st.session_state.generation_mode = generation_mode
@@ -844,6 +848,42 @@ def render_sidebar():
             
             st.markdown("---")
             st.caption("ℹ️ La IA analizará el documento y aplicará sus instrucciones.")
+
+        # ══════════════════════════════════════
+        # GENERATE FROM MGA MODE
+        # ══════════════════════════════════════
+        elif generation_mode == "generar_desde_mga":
+            st.success("📄 Generar Documentos desde MGA")
+            
+            st.markdown("**1. Suba el MGA existente**")
+            mga_source = st.file_uploader(
+                "MGA fuente",
+                type=["pdf", "docx"],
+                help="Suba el documento MGA del cual extraer datos",
+                key="mga_source_upload",
+                label_visibility="collapsed"
+            )
+            
+            if mga_source:
+                st.session_state.mga_source_file = mga_source
+                st.info(f"✅ Archivo cargado: {mga_source.name}")
+            
+            st.markdown("**2. Seleccione documentos a generar**")
+            docs_to_generate = st.multiselect(
+                "Documentos",
+                options=["analisis_sector", "estudios_previos"],
+                format_func=lambda x: "📊 Análisis del Sector" if x == "analisis_sector" else "📋 Estudios Previos",
+                default=[],
+                key="docs_from_mga",
+                label_visibility="collapsed"
+            )
+            st.session_state.docs_to_generate_from_mga = docs_to_generate
+            
+            if docs_to_generate:
+                st.info(f"Se generarán {len(docs_to_generate)} documento(s)")
+            
+            st.markdown("---")
+            st.caption("ℹ️ La IA extraerá datos del MGA y generará los documentos seleccionados.")
 
         
         # ══════════════════════════════════════
@@ -1996,6 +2036,92 @@ def main():
                     import traceback
                     with st.expander("Ver detalles del error"):
                         st.code(traceback.format_exc())
+        
+        elif mode == "generar_desde_mga":
+            # === GENERATE FROM EXISTING MGA LOGIC ===
+            mga_file = st.session_state.get("mga_source_file")
+            docs_to_gen = st.session_state.get("docs_to_generate_from_mga", [])
+            
+            if not mga_file:
+                st.error("⚠️ Por favor suba un documento MGA en el menú lateral.")
+            elif not docs_to_gen:
+                st.error("⚠️ Por favor seleccione al menos un documento a generar.")
+            else:
+                with st.spinner("📄 Extrayendo datos del MGA y generando documentos..."):
+                    try:
+                        # Extract text from MGA
+                        from extractors.document_data_extractor import summarize_development_plan
+                        
+                        # Get summary from MGA file
+                        mga_summary = summarize_development_plan(mga_file)
+                        
+                        if not mga_summary.get("success"):
+                            # Fallback: manual extraction
+                            import fitz
+                            mga_file.seek(0)
+                            pdf = fitz.open(stream=mga_file.read(), filetype="pdf")
+                            mga_text = ""
+                            for page in pdf:
+                                mga_text += page.get_text()
+                            mga_file.seek(0)
+                            
+                            context_data = mga_text[:15000]
+                        else:
+                            context_data = str(mga_summary)
+                        
+                        # Get LLM
+                        llm = get_llm(selected_model)
+                        generated_files = []
+                        
+                        for doc_type_to_gen in docs_to_gen:
+                            if doc_type_to_gen == "analisis_sector":
+                                from generators.analisis_sector_generator import AnalisisSectorGenerator
+                                generator = AnalisisSectorGenerator(llm)
+                                result = generator.generate({
+                                    "context_dump": context_data,
+                                    "entidad": data.get("entidad", ""),
+                                    "sector": data.get("sector", ""),
+                                    "municipio": data.get("municipio", ""),
+                                })
+                            elif doc_type_to_gen == "estudios_previos":
+                                from generators.estudios_previos_generator import EstudiosPreviosGenerator
+                                generator = EstudiosPreviosGenerator(llm)
+                                result = generator.generate({
+                                    "context_dump": context_data,
+                                    "entidad": data.get("entidad", ""),
+                                    "municipio": data.get("municipio", ""),
+                                })
+                            
+                            if result:
+                                generated_files.append({
+                                    "type": doc_type_to_gen,
+                                    "file": result.get("file_path", ""),
+                                    "status": "success" if result.get("success") else "error",
+                                    "error": result.get("error")
+                                })
+                        
+                        # Show results
+                        if generated_files:
+                            st.success(f"✅ Se generaron {len(generated_files)} documento(s) desde el MGA")
+                            for gf in generated_files:
+                                if gf["status"] == "success" and gf["file"]:
+                                    fname = os.path.basename(gf["file"])
+                                    with open(gf["file"], "rb") as f:
+                                        st.download_button(
+                                            label=f"⬇️ Descargar {gf['type'].replace('_', ' ').title()}",
+                                            data=f.read(),
+                                            file_name=fname,
+                                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                        )
+                                else:
+                                    st.error(f"❌ Error en {gf['type']}: {gf.get('error', 'Unknown')}")
+                        
+                    except Exception as e:
+                        st.error(f"❌ Error: {str(e)}")
+                        import traceback
+                        with st.expander("Ver detalles"):
+                            st.code(traceback.format_exc())
+        
         else:
             # === NEW DOCUMENT GENERATION LOGIC ===
             result = run_generation_logic(doc_type, data, selected_model)
