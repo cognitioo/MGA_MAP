@@ -1350,7 +1350,27 @@ def render_mga_subsidios_form():
             print(f"[POAI DEBUG] Processing {len(xlsx.sheet_names)} sheets: {xlsx.sheet_names}")
             
             for sheet_name in xlsx.sheet_names:
-                df = pd.read_excel(xlsx, sheet_name=sheet_name)
+                # Detect Header Row dynamically
+                header_idx = 0
+                try:
+                    df_preview = pd.read_excel(xlsx, sheet_name=sheet_name, header=None, nrows=20)
+                    for idx, row in df_preview.iterrows():
+                        row_str = " ".join([str(x).lower() for x in row.values])
+                        if "código" in row_str and "programa" in row_str:
+                            header_idx = idx
+                            print(f"[POAI DEBUG] Found likely header at row {header_idx} in '{sheet_name}'")
+                            break
+                except Exception as e:
+                    print(f"[POAI DEBUG] Error scanning headers: {e}")
+                
+                # Load dataframe with detected header row
+                df = pd.read_excel(xlsx, sheet_name=sheet_name, header=header_idx)
+                
+                # --- VISIBLE DEBUGGING FOR USER ---
+                st.write(f"🔍 **Diagnóstico POAI (Hoja: {sheet_name})**")
+                st.write(f"- Fila de encabezado detectada: **{header_idx + 1}**")
+                st.code(f"Columnas: {list(df.columns)[:5]}...")
+                
                 poai_text += f"\n=== Hoja: {sheet_name} ===\n"
                 poai_text += df.to_string(index=False)[:4000]
                 
@@ -1378,6 +1398,26 @@ def render_mga_subsidios_form():
                         ('código' in norm_col(col) or 'codigo' in norm_col(col)) and
                         df[col].dropna().apply(lambda x: str(x).replace('.0', '').replace('.', '').isdigit()).any()]
                     print(f"[POAI DEBUG] Code columns found (fallback): {code_columns}")
+                
+                # --- FALLBACK 2: BRUTE FORCE SEARCH (If still no codes) ---
+                if not code_columns:
+                    st.warning("⚠️ No se detectaron columnas de código por nombre. Activando búsqueda profunda de valores...")
+                    print("[POAI DEBUG] Starting Brute Force Search for codes...")
+                    # Scan first 20 columns
+                    for col in df.columns[:20]:
+                        # Check sample values
+                        sample = df[col].dropna().astype(str).tolist()
+                        code_like_count = 0
+                        for val in sample[:50]: # Check first 50 rows
+                            v = val.replace('.0', '').strip()
+                            # Check if it looks like a program code (2-5 digits, not a year like 2024-2030)
+                            if v.isdigit() and 2 <= len(v) <= 5:
+                                if not (len(v) == 4 and v.startswith("202")): # Avoid years like 2024, 2025
+                                    code_like_count += 1
+                        
+                        if code_like_count > 0:
+                            print(f"[POAI DEBUG] Brute force found potential column: {col} ({code_like_count} matches)")
+                            code_columns.append(col)
                 
                 # Name/description columns for program names
                 name_columns = [col for col in df.columns if 
