@@ -1357,28 +1357,34 @@ def render_mga_subsidios_form():
                 # Log all columns for debugging
                 print(f"[POAI DEBUG] Sheet '{sheet_name}' columns: {list(df.columns)}")
                 
-                # Normalize column names for matching
-                col_map = {str(col).lower().strip(): col for col in df.columns}
+                # Normalize column names for matching (handle NEWLINES and multiple spaces)
+                def norm_col(c):
+                    return " ".join(str(c).lower().replace('\n', ' ').split())
+                
+                # Log column names for debugging
+                print(f"[POAI DEBUG] Sheet '{sheet_name}' columns (normalized): {[norm_col(c) for c in df.columns]}")
                 
                 # === 1. EXTRACT PROGRAM CODES ===
                 # Broad search: any column containing 'código' AND ('programa' OR 'presupuestal')
+                # NOW USES NORMALIZED COLUMN NAMES to catch 'Código\nPrograma'
                 code_columns = [col for col in df.columns if 
-                    any(pattern in str(col).lower() for pattern in CODE_PATTERNS)]
+                    any(pattern in norm_col(col) for pattern in CODE_PATTERNS)]
                 
                 print(f"[POAI DEBUG] Code columns found (pattern match): {code_columns}")
                 
                 # Fallback: columns with just 'código' that have numeric values
                 if not code_columns:
                     code_columns = [col for col in df.columns if 
-                        ('código' in str(col).lower() or 'codigo' in str(col).lower()) and
+                        ('código' in norm_col(col) or 'codigo' in norm_col(col)) and
                         df[col].dropna().apply(lambda x: str(x).replace('.0', '').replace('.', '').isdigit()).any()]
                     print(f"[POAI DEBUG] Code columns found (fallback): {code_columns}")
                 
                 # Name/description columns for program names
                 name_columns = [col for col in df.columns if 
-                    'programa presupuestal' in str(col).lower() and
-                    'código' not in str(col).lower() and 
-                    'codigo' not in str(col).lower()]
+                    'programa' in norm_col(col) and 
+                    'presupuestal' in norm_col(col) and
+                    'código' not in norm_col(col) and 
+                    'codigo' not in norm_col(col)]
                 
                 print(f"[POAI DEBUG] Name columns found: {name_columns}")
                 
@@ -1430,7 +1436,7 @@ def render_mga_subsidios_form():
                 
                 # === 2. EXTRACT BPIN ===
                 for col in df.columns:
-                    if any(pattern in str(col).lower() for pattern in BPIN_PATTERNS):
+                    if any(pattern in norm_col(col) for pattern in BPIN_PATTERNS):
                         bpin_values = df[col].dropna().astype(str).unique()
                         for bpin in bpin_values:
                             clean_bpin = str(bpin).replace('.0', '') if str(bpin).endswith('.0') else str(bpin)
@@ -1440,7 +1446,7 @@ def render_mga_subsidios_form():
                 
                 # === 3. EXTRACT PROJECT NAME ===
                 for col in df.columns:
-                    if any(pattern in str(col).lower() for pattern in PROJECT_NAME_PATTERNS):
+                    if any(pattern in norm_col(col) for pattern in PROJECT_NAME_PATTERNS):
                         names = df[col].dropna().astype(str).unique()
                         for name in names:
                             if name and len(str(name)) > 10 and str(name) not in ['nan', 'NaN']:
@@ -1451,7 +1457,7 @@ def render_mga_subsidios_form():
                 
                 # === 4. EXTRACT SECTOR ===
                 for col in df.columns:
-                    if any(pattern in str(col).lower() for pattern in SECTOR_PATTERNS):
+                    if any(pattern in norm_col(col) for pattern in SECTOR_PATTERNS):
                         sectors = df[col].dropna().astype(str).unique()
                         for sector in sectors:
                             if sector and len(str(sector)) > 3 and str(sector) not in ['nan', 'NaN']:
@@ -1462,7 +1468,7 @@ def render_mga_subsidios_form():
                             
                 # === 5. EXTRACT TOTAL VALUE ===
                 for col in df.columns:
-                    if any(pattern in str(col).lower() for pattern in VALUE_PATTERNS):
+                    if any(pattern in norm_col(col) for pattern in VALUE_PATTERNS):
                         # Try to find numeric values
                         try:
                             values = pd.to_numeric(df[col], errors='coerce').dropna()
