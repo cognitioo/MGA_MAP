@@ -1419,6 +1419,34 @@ def render_mga_subsidios_form():
                             print(f"[POAI DEBUG] Brute force found potential column: {col} ({code_like_count} matches)")
                             code_columns.append(col)
                 
+                # --- FALLBACK 3: EXTREME BRUTE FORCE (Scan EVERYTHING) ---
+                if not code_columns and not extracted_poai_codes:
+                    st.warning("⚠️ Búsqueda profunda falló. Iniciando ESCANEO TOTAL de la hoja...")
+                    print("[POAI DEBUG] Starting EXTREME Brute Force (Full Sheet Scan)...")
+                    
+                    # Flatten the entire dataframe to a list of strings
+                    all_values = df.astype(str).values.flatten()
+                    
+                    # Find any 4-digit number that isn't a year (2020-2030)
+                    potential_codes = []
+                    for val in all_values[:5000]: # Check first 5000 cells
+                        v = val.replace('.0', '').strip()
+                        if v.isdigit() and len(v) == 4:
+                            # Exclude years 2020-2030
+                            if not (v.startswith("202") or v == "2030"):
+                                potential_codes.append(v)
+                    
+                    # Get unique codes
+                    potential_codes = sorted(list(set(potential_codes)))
+                    
+                    if potential_codes:
+                        print(f"[POAI DEBUG] EXTREME SCAN FOUND: {potential_codes}")
+                        st.success(f"✅ Códigos encontrados por escaneo total: {', '.join(potential_codes[:5])}")
+                        # Add them directly to extracted codes
+                        extracted_poai_codes.extend(potential_codes)
+                    else:
+                        print("[POAI DEBUG] EXTREME SCAN FOUND NOTHING.")
+
                 # Name/description columns for program names
                 name_columns = [col for col in df.columns if 
                     'programa' in norm_col(col) and 
