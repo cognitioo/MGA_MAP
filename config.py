@@ -17,6 +17,7 @@ def get_secret(key: str, default: str = "") -> str:
     Priority: st.secrets > os.environ > default
     """
     value = default
+    source = "default"
     
     # Try Streamlit secrets first (for Cloud deployment)
     try:
@@ -24,13 +25,21 @@ def get_secret(key: str, default: str = "") -> str:
         # Check standard top-level secrets
         if hasattr(st, 'secrets') and key in st.secrets:
             value = st.secrets[key]
+            source = "st.secrets"
         # Check nested sections (e.g. st.secrets["connections"]["key"])? No, simple flat structure usually.
-    except:
-        pass
+    except Exception as e:
+        print(f"[DEBUG] Error reading st.secrets for {key}: {e}")
     
     # Fall back to environment variable if not found in secrets
     if value == default:
         value = os.getenv(key, default)
+        if value != default:
+            source = "os.environ"
+    
+    # Log what we found (only for API keys, to debug)
+    if "API_KEY" in key and value:
+        preview = f"{value[:8]}...{value[-4:]}" if len(value) > 12 else "SHORT"
+        print(f"[DEBUG] get_secret({key}): source={source}, preview={preview}")
     
     # Sanitize value (remove quotes/spaces potentially added by TOML formatting)
     if value and isinstance(value, str):
