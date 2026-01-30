@@ -1347,10 +1347,15 @@ def render_mga_subsidios_form():
             SECTOR_PATTERNS = ['sector', 'cod sector']
             VALUE_PATTERNS = ['total', 'recursos', 'valor', 'presupuesto']
             
+            print(f"[POAI DEBUG] Processing {len(xlsx.sheet_names)} sheets: {xlsx.sheet_names}")
+            
             for sheet_name in xlsx.sheet_names:
                 df = pd.read_excel(xlsx, sheet_name=sheet_name)
                 poai_text += f"\n=== Hoja: {sheet_name} ===\n"
                 poai_text += df.to_string(index=False)[:4000]
+                
+                # Log all columns for debugging
+                print(f"[POAI DEBUG] Sheet '{sheet_name}' columns: {list(df.columns)}")
                 
                 # Normalize column names for matching
                 col_map = {str(col).lower().strip(): col for col in df.columns}
@@ -1360,17 +1365,22 @@ def render_mga_subsidios_form():
                 code_columns = [col for col in df.columns if 
                     any(pattern in str(col).lower() for pattern in CODE_PATTERNS)]
                 
+                print(f"[POAI DEBUG] Code columns found (pattern match): {code_columns}")
+                
                 # Fallback: columns with just 'código' that have numeric values
                 if not code_columns:
                     code_columns = [col for col in df.columns if 
                         ('código' in str(col).lower() or 'codigo' in str(col).lower()) and
                         df[col].dropna().apply(lambda x: str(x).replace('.0', '').replace('.', '').isdigit()).any()]
+                    print(f"[POAI DEBUG] Code columns found (fallback): {code_columns}")
                 
                 # Name/description columns for program names
                 name_columns = [col for col in df.columns if 
                     'programa presupuestal' in str(col).lower() and
                     'código' not in str(col).lower() and 
                     'codigo' not in str(col).lower()]
+                
+                print(f"[POAI DEBUG] Name columns found: {name_columns}")
                 
                 # Debug: Show which columns were detected
                 if code_columns:
@@ -1379,13 +1389,19 @@ def render_mga_subsidios_form():
                 # Extract actual codes from the POAI
                 for code_col in code_columns:
                     codes = df[code_col].dropna().astype(str).unique()
+                    print(f"[POAI DEBUG] Raw codes in column '{code_col}': {list(codes)[:10]}")
+                    
                     for code in codes:
                         # Clean the code - remove .0 if it's a float-like string
                         clean_code = str(code).replace('.0', '') if str(code).endswith('.0') else str(code)
                         clean_code = clean_code.strip()
                         
+                        print(f"[POAI DEBUG] Processing code: '{code}' -> clean: '{clean_code}'")
+                        
                         # Validate: must be 2-5 digits
                         if clean_code and clean_code != 'nan' and len(clean_code) >= 2 and len(clean_code) <= 5 and clean_code.isdigit():
+                            print(f"[POAI DEBUG] Code '{clean_code}' PASSED validation")
+                            
                             # Try to find matching program name
                             name_found = ""
                             if name_columns:
@@ -1408,6 +1424,9 @@ def render_mga_subsidios_form():
                             # Avoid duplicates
                             if clean_code not in [c.split(' - ')[0] for c in extracted_poai_codes]:
                                 extracted_poai_codes.append(full_code)
+                                print(f"[POAI DEBUG] ✅ EXTRACTED CODE: {full_code}")
+                        else:
+                            print(f"[POAI DEBUG] Code '{clean_code}' FAILED validation (len={len(clean_code)}, isdigit={clean_code.isdigit() if clean_code else 'N/A'})")
                 
                 # === 2. EXTRACT BPIN ===
                 for col in df.columns:
@@ -1456,6 +1475,9 @@ def render_mga_subsidios_form():
                             pass
             
             # === BUILD CONTEXT - CODES GO FIRST (CRITICAL) ===
+            print(f"[POAI DEBUG] Total extracted codes: {len(extracted_poai_codes)}")
+            print(f"[POAI DEBUG] Extracted codes list: {extracted_poai_codes}")
+            
             if extracted_poai_codes:
                 codes_str = "\n".join([f"  🚨 USA ESTE CÓDIGO: {c}" for c in extracted_poai_codes[:5]])
                 poai_critical_section = f"""
@@ -1469,6 +1491,9 @@ def render_mga_subsidios_form():
 ╚══════════════════════════════════════════════════════════════════╝
 """
                 st.success(f"📋 Códigos POAI extraídos: {', '.join(extracted_poai_codes[:3])}")
+                print(f"[POAI DEBUG] ✅✅✅ CRITICAL SECTION CREATED WITH CODES: {extracted_poai_codes[:3]}")
+            else:
+                print("[POAI DEBUG] ⚠️ NO CODES EXTRACTED - AI will fabricate codes!")
             
             # Add other extracted data to critical section
             if extracted_poai_data:
@@ -1488,6 +1513,9 @@ def render_mga_subsidios_form():
             # CRITICAL: Put extracted codes FIRST, then raw POAI data
             context_dump = poai_critical_section + f"\n\n=== DATOS COMPLETOS DEL POAI ===\n{poai_text[:10000]}" + context_dump
             extracted_summary.append(f"✅ POAI: {len(xlsx.sheet_names)} hojas, {len(extracted_poai_codes)} códigos")
+            
+            # Final debug: show what's being sent to AI
+            print(f"[POAI DEBUG] Context dump starts with (first 500 chars):\n{context_dump[:500]}")
         except Exception as e:
             st.error(f"❌ Error procesando POAI: {e}")
     
