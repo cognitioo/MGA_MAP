@@ -1330,18 +1330,49 @@ def render_mga_subsidios_form():
     extracted_summary = []
     
     # Process POAI (XLSX)
+    extracted_poai_codes = []  # Store extracted program codes
     if poai_file:
         try:
             import pandas as pd
             xlsx = pd.ExcelFile(poai_file)
             poai_text = ""
+            
             for sheet_name in xlsx.sheet_names:
                 df = pd.read_excel(xlsx, sheet_name=sheet_name)
                 poai_text += f"\n=== Hoja: {sheet_name} ===\n"
                 poai_text += df.to_string(index=False)[:4000]
+                
+                # EXPLICIT CODE EXTRACTION: Search for program code columns
+                code_columns = [col for col in df.columns if any(kw in str(col).lower() for kw in 
+                    ['código programa', 'codigo programa', 'código presupuestal', 'programa presupuestal', 'cod prog'])]
+                name_columns = [col for col in df.columns if any(kw in str(col).lower() for kw in 
+                    ['programa presupuestal', 'nombre programa', 'descripcion programa'])]
+                
+                # Extract actual codes from the POAI
+                for code_col in code_columns:
+                    codes = df[code_col].dropna().astype(str).unique()
+                    for code in codes:
+                        if code and code != 'nan' and len(code) >= 2:
+                            # Try to find matching program name
+                            if name_columns:
+                                for name_col in name_columns:
+                                    mask = df[code_col].astype(str) == code
+                                    names = df.loc[mask, name_col].dropna().unique()
+                                    for name in names:
+                                        if name and str(name) != 'nan':
+                                            extracted_poai_codes.append(f"{code} - {name}")
+                                            break
+                            if code not in [c.split(' - ')[0] for c in extracted_poai_codes]:
+                                extracted_poai_codes.append(code)
+            
+            # Build context with EXPLICIT code highlighting
+            if extracted_poai_codes:
+                codes_str = "\n".join([f"  ⚠️ CÓDIGO REAL: {c}" for c in extracted_poai_codes[:5]])
+                context_dump += f"\n\n=== ⚠️ CÓDIGOS EXTRAÍDOS DEL POAI (USA ESTOS EXACTAMENTE) ===\n{codes_str}\n"
+                st.success(f"📋 Códigos POAI extraídos: {', '.join(extracted_poai_codes[:3])}")
             
             context_dump += f"\n\n=== DATOS DEL POAI ===\n{poai_text[:12000]}"
-            extracted_summary.append(f"✅ POAI: {len(xlsx.sheet_names)} hojas")
+            extracted_summary.append(f"✅ POAI: {len(xlsx.sheet_names)} hojas, {len(extracted_poai_codes)} códigos")
         except Exception as e:
             st.error(f"❌ Error procesando POAI: {e}")
     

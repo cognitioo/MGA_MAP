@@ -20,9 +20,15 @@ El documento sigue el formato oficial del DNP. Las secciones se adaptan según e
 
 **⚠️ REGLAS CRÍTICAS - GENERACIÓN DE CONTENIDO:**
 
-1. **PRIORIDAD: CONTEXTO REAL**
+1. **🚨 CÓDIGOS DE PROGRAMA - OBLIGATORIO:**
+   - BUSCA la sección "⚠️ CÓDIGOS EXTRAÍDOS DEL POAI" en el contexto.
+   - USA EXACTAMENTE el código que aparece ahí (ej: "2302 - Fomento del desarrollo...")
+   - Si dice "⚠️ CÓDIGO REAL: 2302 - Nombre", ESCRIBE "2302 - Nombre" en el documento.
+   - **NUNCA** uses 4001, 2402, ni NINGÚN otro código que NO esté en la sección de códigos extraídos.
+   - Si no hay códigos extraídos, deja el campo VACÍO.
+
+2. **PRIORIDAD: CONTEXTO REAL**
    - Usa los datos del POAI y Plan de Desarrollo siempre que existan.
-   - **EXTRAE LOS CÓDIGOS DE PROGRAMA** del POAI (formato: "XXXX - Nombre Programa") y úsalos en los planes de desarrollo.
 
 2. **COMPLETITUD OBLIGATORIA (IMPORTANTE):**
    - ❌ **NUNCA DEJES CAMPOS VACÍOS.** El usuario NO quiere ver espacios en blanco.
@@ -93,7 +99,7 @@ RESPONDE CON JSON VÁLIDO:
     "pagina_2_plan_desarrollo": {{
         "plan_nacional": {{
             "nombre": "{plan_nacional}",
-            "programa": "BUSCA en el POAI la columna 'Código Programa Presupuestal' o 'Programa' y copia el código+nombre EXACTO. ⚠️ NO uses ejemplos como '2302' o '2402' - usa SOLO lo que encuentres en el POAI.",
+            "programa": "🚨 COPIA el código EXACTO de la sección '⚠️ CÓDIGOS EXTRAÍDOS DEL POAI'. NO inventes códigos.",
             "transformacion": "Desarrollo Regional / Otro según proyecto",
             "pilar": "Infraestructura / Inclusión / Otro según proyecto",
             "catalizador": "Inversión en infraestructura / Otro según proyecto",
@@ -102,12 +108,12 @@ RESPONDE CON JSON VÁLIDO:
         "plan_departamental": {{
             "nombre": "{plan_departamental}",
             "estrategia": "Estrategia del plan departamental",
-            "programa": "BUSCA en el POAI el código+nombre EXACTO del programa. NO INVENTES códigos."
+            "programa": "🚨 COPIA el código EXACTO de la sección '⚠️ CÓDIGOS EXTRAÍDOS DEL POAI'. NO inventes códigos."
         }},
         "plan_municipal": {{
             "nombre": "{plan_municipal}",
             "estrategia": "Estrategia del plan municipal",
-            "programa": "BUSCA en el POAI el código+nombre EXACTO del programa. NO INVENTES códigos."
+            "programa": "🚨 COPIA el código EXACTO de la sección '⚠️ CÓDIGOS EXTRAÍDOS DEL POAI'. NO inventes códigos."
         }},
         "instrumentos_grupos_etnicos": "No aplica"
     }},
