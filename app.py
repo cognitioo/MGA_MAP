@@ -1553,19 +1553,31 @@ def render_mga_subsidios_form():
             print(f"[POAI DEBUG] Extracted codes list: {extracted_poai_codes}")
             
             if extracted_poai_codes:
-                codes_str = "\n".join([f"  🚨 USA ESTE CÓDIGO: {c}" for c in extracted_poai_codes[:5]])
+                # Allow user to SELECT the correct project
+                st.markdown("---")
+                st.success(f"✅ Se encontraron **{len(extracted_poai_codes)}** proyectos en el POAI.")
+                
+                # Default to index 0, but allow selection
+                selected_code = st.selectbox(
+                    "📌 **Seleccione el Código del Proyecto para generar el MGA:**", 
+                    options=extracted_poai_codes,
+                    index=0,
+                    help="El POAI contiene múltiples proyectos. Seleccione el que corresponde al MGA que desea generar."
+                )
+                
+                # Use ONLY the selected code in the critical section
                 poai_critical_section = f"""
 ╔══════════════════════════════════════════════════════════════════╗
-║  🚨🚨🚨 CÓDIGOS REALES DEL POAI - ¡OBLIGATORIO USAR ESTOS! 🚨🚨🚨   ║
+║  🚨🚨🚨 CÓDIGO OBJETIVO DEL PROYECTO - ¡USAR SOLO ESTE! 🚨🚨🚨      ║
 ╠══════════════════════════════════════════════════════════════════╣
-{codes_str}
+  🚨 CÓDIGO SELECCIONADO: {selected_code}
 ╠══════════════════════════════════════════════════════════════════╣
-║  ❌ NO uses 401, 2402, 4001 ni NINGÚN código inventado.          ║
-║  ✅ COPIA EXACTAMENTE los códigos de arriba en el documento.     ║
+║  ❌ NO uses ningún otro código del archivo (401, 406, etc.)      ║
+║  ✅ ESTE es el único código válido para este documento.          ║
 ╚══════════════════════════════════════════════════════════════════╝
 """
-                st.success(f"📋 Códigos POAI extraídos: {', '.join(extracted_poai_codes[:3])}")
-                print(f"[POAI DEBUG] ✅✅✅ CRITICAL SECTION CREATED WITH CODES: {extracted_poai_codes[:3]}")
+                print(f"[POAI DEBUG] ✅ User selected code: {selected_code}")
+                # We do NOT show the list in st.success anymore to avoid clutter, the selectbox is enough
             else:
                 print("[POAI DEBUG] ⚠️ NO CODES EXTRACTED - AI will fabricate codes!")
             
