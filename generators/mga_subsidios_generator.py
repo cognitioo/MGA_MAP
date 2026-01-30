@@ -68,15 +68,24 @@ class MGASubsidiosGenerator:
     def _format_context(self, data: dict) -> str:
         """
         Format context data for AI prompts.
+        CRITICAL: POAI context goes FIRST because it contains extracted codes.
         Uses structured summary if available (from dev_plan_summary),
         otherwise falls back to raw context_dump with increased limit.
         """
+        parts = []
+        
+        # ===== POAI CONTEXT GOES FIRST (CRITICAL) =====
+        # This contains the extracted codes that MUST be used
+        poai_context = data.get("context_dump", "")
+        if poai_context:
+            # Increased limit from 4000 to 12000 chars
+            parts.append(f"=== 🚨 DATOS DEL POAI (USAR ESTOS CÓDIGOS) ===\n{poai_context[:12000]}")
+        
         # Check for structured summary from Development Plan
         dev_plan_summary = data.get("dev_plan_summary", {})
         
         if dev_plan_summary and dev_plan_summary.get("success"):
             # Format structured summary into readable text
-            parts = []
             
             # Global summary
             if dev_plan_summary.get("resumen_global"):
@@ -86,7 +95,7 @@ class MGASubsidiosGenerator:
             datos_prog = dev_plan_summary.get("datos_programa", {})
             if datos_prog:
                 if datos_prog.get("codigos_programa"):
-                    parts.append(f"CÓDIGOS DE PROGRAMA: {', '.join(datos_prog['codigos_programa'])}")
+                    parts.append(f"CÓDIGOS DE PROGRAMA (Plan Desarrollo): {', '.join(datos_prog['codigos_programa'])}")
                 if datos_prog.get("presupuestos"):
                     parts.append(f"PRESUPUESTOS: {', '.join(datos_prog['presupuestos'])}")
                 if datos_prog.get("metas"):
@@ -111,17 +120,12 @@ class MGASubsidiosGenerator:
                 if page_texts:
                     parts.append("DATOS POR PÁGINA:\n" + "\n".join(page_texts))
             
-            # Add raw POAI context if available
-            poai_context = data.get("context_dump", "")
-            if poai_context:
-                parts.append(f"\nCONTEXTO POAI:\n{poai_context[:4000]}")  # 4k for POAI
-            
             return "\n\n".join(parts)
         
         else:
-            # Fallback: use raw context_dump with increased limit (8000 chars)
+            # Fallback: use raw context_dump with increased limit (12000 chars)
             raw_context = data.get("context_dump", "No disponible") or ""
-            return raw_context[:8000]
+            return raw_context[:12000]
     
     
     def generate_complete(self, data: dict) -> dict:

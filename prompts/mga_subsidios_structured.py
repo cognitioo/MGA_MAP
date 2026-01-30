@@ -18,33 +18,38 @@ Tu tarea es generar contenido estructurado para un documento MGA (Metodología G
 **ESTRUCTURA MGA DINÁMICA:**
 El documento sigue el formato oficial del DNP. Las secciones se adaptan según el tipo de proyecto.
 
-**⚠️ REGLAS CRÍTICAS - GENERACIÓN DE CONTENIDO:**
+**🚨🚨🚨 REGLA #1 - CÓDIGOS DE PROGRAMA (LA MÁS IMPORTANTE) 🚨🚨🚨**
 
-1. **🚨 CÓDIGOS DE PROGRAMA - OBLIGATORIO:**
-   - BUSCA la sección "⚠️ CÓDIGOS EXTRAÍDOS DEL POAI" en el contexto.
-   - USA EXACTAMENTE el código que aparece ahí (ej: "2302 - Fomento del desarrollo...")
-   - Si dice "⚠️ CÓDIGO REAL: 2302 - Nombre", ESCRIBE "2302 - Nombre" en el documento.
-   - **NUNCA** uses 4001, 2402, ni NINGÚN otro código que NO esté en la sección de códigos extraídos.
-   - Si no hay códigos extraídos, deja el campo VACÍO.
+⚠️ AL INICIO DEL CONTEXTO verás una CAJA con formato:
+╔══════════════════════════════════════════════════════════════════╗
+║  🚨🚨🚨 CÓDIGOS REALES DEL POAI - ¡OBLIGATORIO USAR ESTOS! 🚨🚨🚨   ║
+╠══════════════════════════════════════════════════════════════════╣
+  🚨 USA ESTE CÓDIGO: XXXX - Nombre del programa
+╚══════════════════════════════════════════════════════════════════╝
 
-2. **PRIORIDAD: CONTEXTO REAL**
+✅ **DEBES** copiar EXACTAMENTE el código que aparece en esa caja.
+✅ Si dice "🚨 USA ESTE CÓDIGO: 2302 - Fomento...", escribe "2302 - Fomento..." en el documento.
+❌ **NUNCA** inventes códigos como 401, 4001, 2402, etc.
+❌ **NUNCA** uses códigos que NO aparezcan en la caja del POAI.
+❌ Si no hay caja de códigos, deja el campo de programa VACÍO.
+
+**REGLAS ADICIONALES:**
+
+1. **PRIORIDAD: CONTEXTO REAL**
    - Usa los datos del POAI y Plan de Desarrollo siempre que existan.
 
-2. **COMPLETITUD OBLIGATORIA (IMPORTANTE):**
-   - ❌ **NUNCA DEJES CAMPOS VACÍOS.** El usuario NO quiere ver espacios en blanco.
-   - ✅ **SI FALTA INFORMACIÓN:** ERES UN EXPERTO EN PROYECTOS. **GENERA** un valor realista, coherente y técnico basado en el nombre del proyecto y el municipio.
-   - Ejemplo: Si falta el "Programa", BÚSCALO en el POAI. ⚠️ NUNCA uses códigos de ejemplo como "2402" - solo usa los códigos REALES del documento POAI.
-   - Ejemplo: Si falta la "Meta", estima una meta razonable (ej: "100% de ejecución").
+2. **COMPLETITUD OBLIGATORIA (otros campos):**
+   - ❌ **NUNCA DEJES CAMPOS VACÍOS** (excepto BPIN y programa si no hay código).
+   - ✅ **SI FALTA INFORMACIÓN:** GENERA un valor realista basado en el nombre del proyecto y municipio.
 
 3. **REALISMO TÉCNICO:**
-   - Tus invenciones deben sonar OFICIALES y TÉCNICAS.
-   - No uses "Lorem Ipsum" ni texto genérico. Usa terminología propia de proyectos de inversión pública en Colombia.
+   - Usa terminología propia de proyectos de inversión pública en Colombia.
+   - No uses texto genérico ni Lorem Ipsum.
 
 4. **⚠️ REGLAS ESPECIALES:**
    - **BPIN:** SIEMPRE déjalo VACÍO - se asigna después de aprobación.
-   - **CÓDIGOS DE PROGRAMA:** ⚠️ EXTRAE los códigos EXACTOS del documento POAI (formato "XXXX - Nombre"). NUNCA uses "2402", "2302" ni ningún código de ejemplo.
-   - **POBLACIÓN:** Usa NÚMEROS REALES (ej: 30104) de la tabla de proyección, NO porcentajes.
-   - **NO COPIES** datos de otros proyectos (acueducto, subsidios, etc.) a menos que el proyecto actual sea de ese tipo.
+   - **POBLACIÓN:** Usa NÚMEROS REALES (ej: 30104), NO porcentajes.
+   - **NO COPIES** datos de otros proyectos a menos que el proyecto actual sea de ese tipo.
 
 5. **FORMATO:**
    - Responde SOLO en JSON válido.
@@ -99,7 +104,7 @@ RESPONDE CON JSON VÁLIDO:
     "pagina_2_plan_desarrollo": {{
         "plan_nacional": {{
             "nombre": "{plan_nacional}",
-            "programa": "🚨 COPIA el código EXACTO de la sección '⚠️ CÓDIGOS EXTRAÍDOS DEL POAI'. NO inventes códigos.",
+            "programa": "🚨 COPIA el código de la CAJA al inicio del contexto (ej: 2302 - Nombre). Si no hay caja, deja VACÍO.",
             "transformacion": "Desarrollo Regional / Otro según proyecto",
             "pilar": "Infraestructura / Inclusión / Otro según proyecto",
             "catalizador": "Inversión en infraestructura / Otro según proyecto",
@@ -108,12 +113,12 @@ RESPONDE CON JSON VÁLIDO:
         "plan_departamental": {{
             "nombre": "{plan_departamental}",
             "estrategia": "Estrategia del plan departamental",
-            "programa": "🚨 COPIA el código EXACTO de la sección '⚠️ CÓDIGOS EXTRAÍDOS DEL POAI'. NO inventes códigos."
+            "programa": "🚨 COPIA el código de la CAJA al inicio del contexto. Si no hay caja, deja VACÍO."
         }},
         "plan_municipal": {{
             "nombre": "{plan_municipal}",
             "estrategia": "Estrategia del plan municipal",
-            "programa": "🚨 COPIA el código EXACTO de la sección '⚠️ CÓDIGOS EXTRAÍDOS DEL POAI'. NO inventes códigos."
+            "programa": "🚨 COPIA el código de la CAJA al inicio del contexto. Si no hay caja, deja VACÍO."
         }},
         "instrumentos_grupos_etnicos": "No aplica"
     }},

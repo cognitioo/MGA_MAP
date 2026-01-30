@@ -1329,62 +1329,164 @@ def render_mga_subsidios_form():
     context_dump = ""
     extracted_summary = []
     
-    # Process POAI (XLSX)
+    # Process POAI (XLSX) - IMPROVED EXTRACTION
     extracted_poai_codes = []  # Store extracted program codes
+    extracted_poai_data = {}   # Store additional extracted fields
+    poai_critical_section = "" # HIGH PRIORITY section for codes - placed FIRST
+    
     if poai_file:
         try:
             import pandas as pd
             xlsx = pd.ExcelFile(poai_file)
             poai_text = ""
             
+            # Column patterns for different data types
+            CODE_PATTERNS = ['código programa', 'codigo programa', 'código presupuestal', 'codigo presupuestal']
+            BPIN_PATTERNS = ['bpin', 'codigo bpin', 'código bpin']
+            PROJECT_NAME_PATTERNS = ['producto mga', 'nombre proyecto', 'proyecto', 'producto']
+            SECTOR_PATTERNS = ['sector', 'cod sector']
+            VALUE_PATTERNS = ['total', 'recursos', 'valor', 'presupuesto']
+            
             for sheet_name in xlsx.sheet_names:
                 df = pd.read_excel(xlsx, sheet_name=sheet_name)
                 poai_text += f"\n=== Hoja: {sheet_name} ===\n"
                 poai_text += df.to_string(index=False)[:4000]
                 
-                # EXPLICIT CODE EXTRACTION: Search for program code columns
-                # Code column MUST have 'código' or 'codigo' in the name (not just 'programa')
-                code_columns = [col for col in df.columns if 
-                    ('código' in str(col).lower() or 'codigo' in str(col).lower()) and 
-                    ('programa' in str(col).lower() or 'presupuestal' in str(col).lower())]
+                # Normalize column names for matching
+                col_map = {str(col).lower().strip(): col for col in df.columns}
                 
-                # Name/description columns - should NOT have 'código' in the name
+                # === 1. EXTRACT PROGRAM CODES ===
+                # Broad search: any column containing 'código' AND ('programa' OR 'presupuestal')
+                code_columns = [col for col in df.columns if 
+                    any(pattern in str(col).lower() for pattern in CODE_PATTERNS)]
+                
+                # Fallback: columns with just 'código' that have numeric values
+                if not code_columns:
+                    code_columns = [col for col in df.columns if 
+                        ('código' in str(col).lower() or 'codigo' in str(col).lower()) and
+                        df[col].dropna().apply(lambda x: str(x).replace('.0', '').replace('.', '').isdigit()).any()]
+                
+                # Name/description columns for program names
                 name_columns = [col for col in df.columns if 
-                    'programa' in str(col).lower() and 
-                    'presupuestal' in str(col).lower() and
+                    'programa presupuestal' in str(col).lower() and
                     'código' not in str(col).lower() and 
                     'codigo' not in str(col).lower()]
                 
                 # Debug: Show which columns were detected
                 if code_columns:
-                    st.info(f"🔍 Columnas de código encontradas: {code_columns}")
+                    st.info(f"🔍 Columnas de código encontradas en '{sheet_name}': {code_columns}")
                 
                 # Extract actual codes from the POAI
                 for code_col in code_columns:
                     codes = df[code_col].dropna().astype(str).unique()
                     for code in codes:
                         # Clean the code - remove .0 if it's a float-like string
-                        clean_code = code.replace('.0', '') if code.endswith('.0') else code
-                        if clean_code and clean_code != 'nan' and len(clean_code) >= 2 and clean_code.replace('.', '').isdigit():
+                        clean_code = str(code).replace('.0', '') if str(code).endswith('.0') else str(code)
+                        clean_code = clean_code.strip()
+                        
+                        # Validate: must be 2-5 digits
+                        if clean_code and clean_code != 'nan' and len(clean_code) >= 2 and len(clean_code) <= 5 and clean_code.isdigit():
                             # Try to find matching program name
+                            name_found = ""
                             if name_columns:
                                 for name_col in name_columns:
-                                    mask = df[code_col].astype(str) == code
+                                    mask = df[code_col].astype(str).str.replace('.0', '') == clean_code
                                     names = df.loc[mask, name_col].dropna().unique()
                                     for name in names:
                                         if name and str(name) != 'nan':
-                                            extracted_poai_codes.append(f"{clean_code} - {name}")
+                                            name_found = str(name).strip()
                                             break
+                                    if name_found:
+                                        break
+                            
+                            # Add code (with or without name)
+                            if name_found:
+                                full_code = f"{clean_code} - {name_found}"
+                            else:
+                                full_code = clean_code
+                            
+                            # Avoid duplicates
                             if clean_code not in [c.split(' - ')[0] for c in extracted_poai_codes]:
-                                extracted_poai_codes.append(clean_code)
+                                extracted_poai_codes.append(full_code)
+                
+                # === 2. EXTRACT BPIN ===
+                for col in df.columns:
+                    if any(pattern in str(col).lower() for pattern in BPIN_PATTERNS):
+                        bpin_values = df[col].dropna().astype(str).unique()
+                        for bpin in bpin_values:
+                            clean_bpin = str(bpin).replace('.0', '') if str(bpin).endswith('.0') else str(bpin)
+                            if clean_bpin and len(clean_bpin) >= 8 and clean_bpin not in ['nan', 'NaN']:
+                                extracted_poai_data['bpin'] = clean_bpin
+                                break
+                
+                # === 3. EXTRACT PROJECT NAME ===
+                for col in df.columns:
+                    if any(pattern in str(col).lower() for pattern in PROJECT_NAME_PATTERNS):
+                        names = df[col].dropna().astype(str).unique()
+                        for name in names:
+                            if name and len(str(name)) > 10 and str(name) not in ['nan', 'NaN']:
+                                extracted_poai_data['nombre_proyecto'] = str(name).strip()
+                                break
+                        if 'nombre_proyecto' in extracted_poai_data:
+                            break
+                
+                # === 4. EXTRACT SECTOR ===
+                for col in df.columns:
+                    if any(pattern in str(col).lower() for pattern in SECTOR_PATTERNS):
+                        sectors = df[col].dropna().astype(str).unique()
+                        for sector in sectors:
+                            if sector and len(str(sector)) > 3 and str(sector) not in ['nan', 'NaN']:
+                                extracted_poai_data['sector'] = str(sector).strip()
+                                break
+                        if 'sector' in extracted_poai_data:
+                            break
+                            
+                # === 5. EXTRACT TOTAL VALUE ===
+                for col in df.columns:
+                    if any(pattern in str(col).lower() for pattern in VALUE_PATTERNS):
+                        # Try to find numeric values
+                        try:
+                            values = pd.to_numeric(df[col], errors='coerce').dropna()
+                            if not values.empty:
+                                total_val = values.sum() if values.sum() > 0 else values.max()
+                                if total_val > 1000:  # Reasonable minimum for a budget
+                                    extracted_poai_data['valor_total'] = f"{total_val:,.0f}"
+                                    break
+                        except:
+                            pass
             
-            # Build context with EXPLICIT code highlighting
+            # === BUILD CONTEXT - CODES GO FIRST (CRITICAL) ===
             if extracted_poai_codes:
-                codes_str = "\n".join([f"  ⚠️ CÓDIGO REAL: {c}" for c in extracted_poai_codes[:5]])
-                context_dump += f"\n\n=== ⚠️ CÓDIGOS EXTRAÍDOS DEL POAI (USA ESTOS EXACTAMENTE) ===\n{codes_str}\n"
+                codes_str = "\n".join([f"  🚨 USA ESTE CÓDIGO: {c}" for c in extracted_poai_codes[:5]])
+                poai_critical_section = f"""
+╔══════════════════════════════════════════════════════════════════╗
+║  🚨🚨🚨 CÓDIGOS REALES DEL POAI - ¡OBLIGATORIO USAR ESTOS! 🚨🚨🚨   ║
+╠══════════════════════════════════════════════════════════════════╣
+{codes_str}
+╠══════════════════════════════════════════════════════════════════╣
+║  ❌ NO uses 401, 2402, 4001 ni NINGÚN código inventado.          ║
+║  ✅ COPIA EXACTAMENTE los códigos de arriba en el documento.     ║
+╚══════════════════════════════════════════════════════════════════╝
+"""
                 st.success(f"📋 Códigos POAI extraídos: {', '.join(extracted_poai_codes[:3])}")
             
-            context_dump += f"\n\n=== DATOS DEL POAI ===\n{poai_text[:12000]}"
+            # Add other extracted data to critical section
+            if extracted_poai_data:
+                poai_critical_section += "\n=== DATOS CLAVE EXTRAÍDOS DEL POAI ===\n"
+                if 'bpin' in extracted_poai_data:
+                    poai_critical_section += f"  BPIN: {extracted_poai_data['bpin']}\n"
+                if 'nombre_proyecto' in extracted_poai_data:
+                    poai_critical_section += f"  PROYECTO: {extracted_poai_data['nombre_proyecto']}\n"
+                if 'sector' in extracted_poai_data:
+                    poai_critical_section += f"  SECTOR: {extracted_poai_data['sector']}\n"
+                if 'valor_total' in extracted_poai_data:
+                    poai_critical_section += f"  VALOR TOTAL: ${extracted_poai_data['valor_total']} COP\n"
+                
+                # Show extracted data in UI
+                st.info(f"📊 Datos extraídos: {', '.join([f'{k}: {v[:30]}...' if len(str(v)) > 30 else f'{k}: {v}' for k, v in extracted_poai_data.items()])}")
+            
+            # CRITICAL: Put extracted codes FIRST, then raw POAI data
+            context_dump = poai_critical_section + f"\n\n=== DATOS COMPLETOS DEL POAI ===\n{poai_text[:10000]}" + context_dump
             extracted_summary.append(f"✅ POAI: {len(xlsx.sheet_names)} hojas, {len(extracted_poai_codes)} códigos")
         except Exception as e:
             st.error(f"❌ Error procesando POAI: {e}")
