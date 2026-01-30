@@ -1616,22 +1616,37 @@ def render_mga_subsidios_form():
                 dev_plan_summary = summarize_development_plan(dev_plan_file)
             
             if dev_plan_summary.get("success"):
+                import json
                 raw_len = dev_plan_summary.get("raw_text_length", 0)
                 sum_len = dev_plan_summary.get("summary_length", 0)
                 reduction = int((1 - sum_len / max(raw_len, 1)) * 100) if raw_len > 0 else 0
                 
                 extracted_summary.append(f"✅ Plan: {raw_len:,}→{sum_len:,} chars ({reduction}% reducción)")
                 
-                # Show summary preview in expander
+                # Show summary preview in expander (Updated for Hierarchy)
                 with st.expander("📊 Resumen del Plan de Desarrollo (generado por IA)", expanded=False):
                     if dev_plan_summary.get("resumen_global"):
                         st.write(f"**Resumen:** {dev_plan_summary['resumen_global']}")
                     
-                    datos_prog = dev_plan_summary.get("datos_programa", {})
-                    if datos_prog.get("codigos_programa"):
-                        st.write(f"**Programas:** {', '.join(datos_prog['codigos_programa'])}")
-                    if datos_prog.get("metas"):
-                        st.write(f"**Metas:** {', '.join(datos_prog['metas'][:3])}")
+                    # Show extracted hierarchy
+                    alineacion = dev_plan_summary.get("alineacion_estrategica", {})
+                    if alineacion:
+                        st.markdown("##### 🎯 Alineación Estratégica Detectada")
+                        cols = st.columns(3)
+                        with cols[0]:
+                            st.caption("🇨🇴 Nacional")
+                            st.json(alineacion.get("plan_nacional", {}), expanded=False)
+                        with cols[1]:
+                            st.caption("🏛️ Departamental")
+                            st.json(alineacion.get("plan_departamental", {}), expanded=False)
+                        with cols[2]:
+                            st.caption("🏘️ Municipal")
+                            st.json(alineacion.get("plan_municipal", {}), expanded=False)
+
+                # CRITICAL FIX: Inject structured summary into context for the Generator
+                context_dump += "\n\n=== RESUMEN ESTRUCTURADO DEL PLAN DE DESARROLLO ===\n"
+                context_dump += json.dumps(dev_plan_summary, indent=2, ensure_ascii=False)
+                print("[POAI DEBUG] ✅ Injected Development Plan summary into context!")
             else:
                 # Fallback to basic extraction if summarization fails
                 st.warning(f"⚠️ Resumen falló: {dev_plan_summary.get('error', 'Unknown')}. Usando extracción básica.")

@@ -583,45 +583,50 @@ def summarize_development_plan(uploaded_file, llm_cheap=None) -> Dict[str, Any]:
             return {"error": f"Could not initialize summarizer: {e}", "raw_text_length": len(full_text)}
     
     # Summarization prompt
-    summarization_prompt = """Eres un experto en extracción de datos de Planes de Desarrollo colombianos.
+    summarization_prompt = """Eres un experto en lectura de Planes de Desarrollo gubernamentales en Colombia.
 
-TAREA: Analiza este documento y extrae información estructurada para un proyecto MGA.
+TAREA: Extraer la "Alineación Estratégica" del proyecto con los Planes de Desarrollo Nacional, Departamental y Municipal.
 
-DOCUMENTO COMPLETO:
+DOCUMENTO:
 {full_text}
+
+Debes identificar qué líneas estratégicas, programas o metas de este plan se relacionan con un proyecto de inversión pública.
 
 EXTRAE en formato JSON estricto:
 
 {{
-    "resumen_global": "Resumen de 2-3 oraciones del plan completo (máximo 100 palabras)",
-    "paginas_relevantes": [
-        {{
-            "pagina": "Número o rango de página",
-            "seccion": "Nombre de la sección",
-            "contenido_clave": ["Dato 1", "Dato 2", "Dato 3"]
+    "resumen_global": "Resumen ejecutivo del plan (máx 50 palabras)",
+    "alineacion_estrategica": {{
+        "plan_nacional": {{
+            "nombre": "Nombre del Plan Nacional (si aparece)",
+            "estrategia": "Línea Estratégica o Pilares del PND",
+            "programa": "Programa específico del PND"
+        }},
+        "plan_departamental": {{
+            "nombre": "Nombre del Plan Departamental (si aparece)",
+            "estrategia": "Línea Estratégica / Eje / Dimensión",
+            "programa": "Programa o Subprograma específico"
+        }},
+        "plan_municipal": {{
+            "nombre": "Nombre del Plan Municipal (si aparece)",
+            "estrategia": "Eje Estratégico / Línea",
+            "programa": "Programa presupuestal o sectorial",
+            "metas": ["Meta de producto 1", "Meta de resultado 1"]
         }}
-    ],
-    "datos_programa": {{
-        "codigos_programa": ["(EXTRAE del documento POAI - NO uses ejemplos como 2402)"],
-        "presupuestos": ["5,000,000,000 - Programa X"],
-        "metas": ["100km vías", "500 beneficiarios"],
-        "indicadores": ["Km construidos", "Familias atendidas"]
     }},
-    "poblacion": {{
-        "total": "Número si se encuentra",
-        "urbana": "Número",
-        "rural": "Número"
+    "datos_programa": {{
+        "codigos_programa": ["Posibles códigos BPIN o programas sectoriales"],
+        "fuentes_financiacion": ["SGP", "Recursos Propios", "SGR"],
+        "poblacion": "Beneficiarios mencionados"
     }}
 }}
 
-REGLAS CRÍTICAS:
-1. Extrae SOLO datos factuales (números, nombres, códigos)
-2. NO inventes ni interpretes datos
-3. Prioriza: presupuestos, metas, indicadores, códigos de programa
-4. Máximo 400 palabras en total
-5. Si no encuentras un dato, omítelo (no pongas "No encontrado")
+REGLAS:
+1. Si no encuentras una sección específica (ej: Plan Nacional), déjala con valores genéricos pero NO vacíos (ej: "Alineación con PND vigente").
+2. Prioriza el Plan Municipal/Departamental (Local).
+3. Busca texto como "Eje:", "Línea:", "Programa:", "Estrategia:".
 
-Responde SOLO con JSON válido, sin explicaciones."""
+Responde SOLO con JSON válido."""
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", "Eres un asistente de extracción de datos. Responde SOLO en JSON válido."),
