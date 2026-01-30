@@ -1343,16 +1343,29 @@ def render_mga_subsidios_form():
                 poai_text += df.to_string(index=False)[:4000]
                 
                 # EXPLICIT CODE EXTRACTION: Search for program code columns
-                code_columns = [col for col in df.columns if any(kw in str(col).lower() for kw in 
-                    ['código programa', 'codigo programa', 'código presupuestal', 'programa presupuestal', 'cod prog'])]
-                name_columns = [col for col in df.columns if any(kw in str(col).lower() for kw in 
-                    ['programa presupuestal', 'nombre programa', 'descripcion programa'])]
+                # Code column MUST have 'código' or 'codigo' in the name (not just 'programa')
+                code_columns = [col for col in df.columns if 
+                    ('código' in str(col).lower() or 'codigo' in str(col).lower()) and 
+                    ('programa' in str(col).lower() or 'presupuestal' in str(col).lower())]
+                
+                # Name/description columns - should NOT have 'código' in the name
+                name_columns = [col for col in df.columns if 
+                    'programa' in str(col).lower() and 
+                    'presupuestal' in str(col).lower() and
+                    'código' not in str(col).lower() and 
+                    'codigo' not in str(col).lower()]
+                
+                # Debug: Show which columns were detected
+                if code_columns:
+                    st.info(f"🔍 Columnas de código encontradas: {code_columns}")
                 
                 # Extract actual codes from the POAI
                 for code_col in code_columns:
                     codes = df[code_col].dropna().astype(str).unique()
                     for code in codes:
-                        if code and code != 'nan' and len(code) >= 2:
+                        # Clean the code - remove .0 if it's a float-like string
+                        clean_code = code.replace('.0', '') if code.endswith('.0') else code
+                        if clean_code and clean_code != 'nan' and len(clean_code) >= 2 and clean_code.replace('.', '').isdigit():
                             # Try to find matching program name
                             if name_columns:
                                 for name_col in name_columns:
@@ -1360,10 +1373,10 @@ def render_mga_subsidios_form():
                                     names = df.loc[mask, name_col].dropna().unique()
                                     for name in names:
                                         if name and str(name) != 'nan':
-                                            extracted_poai_codes.append(f"{code} - {name}")
+                                            extracted_poai_codes.append(f"{clean_code} - {name}")
                                             break
-                            if code not in [c.split(' - ')[0] for c in extracted_poai_codes]:
-                                extracted_poai_codes.append(code)
+                            if clean_code not in [c.split(' - ')[0] for c in extracted_poai_codes]:
+                                extracted_poai_codes.append(clean_code)
             
             # Build context with EXPLICIT code highlighting
             if extracted_poai_codes:
