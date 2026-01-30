@@ -21,7 +21,7 @@ load_dotenv()
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import get_llm, get_available_providers, LLM_PROVIDERS, APP_TITLE, APP_DESCRIPTION, get_secret, GROQ_API_KEY
+from config import get_llm, get_available_providers, LLM_PROVIDERS, APP_TITLE, APP_DESCRIPTION, get_secret, GROQ_API_KEY, OFFICIAL_SECTORS
 from generators.estudios_previos_generator import EstudiosPreviosGenerator
 from generators.analisis_sector_generator import AnalisisSectorGenerator
 from generators.dts_generator import DTSGenerator
@@ -1074,20 +1074,7 @@ def render_analisis_sector_form():
     col1, col2 = st.columns(2)
     
     with col1:
-        sector_options = [
-            "Vivienda, ciudad y territorio",
-            "Educación",
-            "Salud y protección social",
-            "Agricultura y desarrollo rural",
-            "Transporte",
-            "Agua potable y saneamiento básico",
-            "Cultura",
-            "Ambiente y desarrollo sostenible",
-            "Inclusión social y reconciliación",
-            "Deporte y recreación",
-            "Tecnología de la información",
-            "Otro"
-        ]
+        sector_options = OFFICIAL_SECTORS
         sector = st.selectbox("Sector *", sector_options, key="as_sector")
         codigo_ciiu = st.text_input("Código CIIU", placeholder="Ej: 7110 - Actividades de arquitectura e ingeniería")
     
@@ -1440,16 +1427,7 @@ def render_mga_subsidios_form():
         cargo = st.text_input("Cargo", value="Secretario de Planeación", key="mga_cargo")
     
     with col3:
-        sector = st.selectbox("Sector", [
-            "Vivienda, ciudad y territorio",
-            "Educación",
-            "Salud",
-            "Agricultura y desarrollo rural",
-            "Transporte",
-            "Cultura",
-            "Ambiente",
-            "Otro"
-        ], key="mga_sector")
+        sector = st.selectbox("Sector", OFFICIAL_SECTORS, key="mga_sector")
     
     # Letterhead
     st.markdown("---")
@@ -1466,6 +1444,23 @@ def render_mga_subsidios_form():
     else:
         st.info("✅ **Listo para generar.** La IA analizará los documentos y creará el MGA completo.")
     
+    # Plan de Desarrollo details (optional manual input)
+    with st.expander("📋 Datos Plan de Desarrollo (Opcional)", expanded=False):
+        st.caption("La IA extrae estos datos automáticamente del Plan de Desarrollo, pero puede ingresarlos manualmente si lo desea.")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Plan Departamental**")
+            plan_depto_nombre = st.text_input("Nombre del Plan", key="pd_depto_nombre", placeholder="Ej: Plan de Desarrollo Departamental 2024-2027")
+            plan_depto_estrategia = st.text_input("Estrategia", key="pd_depto_estrategia", placeholder="Ej: Desarrollo territorial sostenible")
+            plan_depto_programa = st.text_input("Programa", key="pd_depto_programa", placeholder="Ej: 4501 - Mejoramiento de vías")
+        
+        with col2:
+            st.markdown("**Plan Municipal**")
+            plan_mun_nombre = st.text_input("Nombre del Plan", key="pd_mun_nombre", placeholder="Ej: Plan de Desarrollo Municipal 2024-2027")
+            plan_mun_estrategia = st.text_input("Estrategia", key="pd_mun_estrategia", placeholder="Ej: Infraestructura para el progreso")
+            plan_mun_programa = st.text_input("Programa", key="pd_mun_programa", placeholder="Ej: 4502 - Vías terciarias")
+    
     return {
         "municipio": municipio,
         "departamento": departamento,
@@ -1477,8 +1472,16 @@ def render_mga_subsidios_form():
         "duracion": "365",
         "fecha_creacion": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
         "plan_nacional": "(2022-2026) Colombia Potencia Mundial de la Vida",
-        "plan_departamental": "",  # AI extracts from Dev Plan
-        "plan_municipal": "",  # AI extracts from Dev Plan
+        "plan_departamental": {
+            "nombre": plan_depto_nombre,
+            "estrategia": plan_depto_estrategia,
+            "programa": plan_depto_programa
+        } if plan_depto_nombre or plan_depto_estrategia or plan_depto_programa else "",
+        "plan_municipal": {
+            "nombre": plan_mun_nombre,
+            "estrategia": plan_mun_estrategia,
+            "programa": plan_mun_programa
+        } if plan_mun_nombre or plan_mun_estrategia or plan_mun_programa else "",
         "responsable": responsable,
         "cargo": cargo,
         "sector": sector,
@@ -1542,20 +1545,7 @@ def render_unified_form():
     
     col1, col2 = st.columns(2)
     with col1:
-        sector_options = [
-            "Vivienda, ciudad y territorio",
-            "Educación",
-            "Salud y protección social",
-            "Agricultura y desarrollo rural",
-            "Transporte",
-            "Agua potable y saneamiento básico",
-            "Cultura",
-            "Ambiente y desarrollo sostenible",
-            "Inclusión social y reconciliación",
-            "Deporte y recreación",
-            "Tecnología de la información",
-            "Otro"
-        ]
+        sector_options = OFFICIAL_SECTORS
         sector = st.selectbox("Sector Económico", sector_options, key="uni_sector")
         programa = st.text_input("Programa (DTS)", placeholder="Ej: 4002 - Usuarios beneficiados...", key="uni_programa")
     with col2:

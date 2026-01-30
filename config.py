@@ -10,6 +10,30 @@ from dotenv import load_dotenv
 # Load .env for local development
 load_dotenv()
 
+# --- Official DNP Sectors for Colombia ---
+# Used across all sector dropdowns in the application
+OFFICIAL_SECTORS = [
+    "Gobierno territorial",  # Client requested
+    "Agricultura y Desarrollo Rural",
+    "Salud y Protección Social",
+    "Trabajo",
+    "Minas y Energía",
+    "Comercio, Industria y Turismo",
+    "Educación",
+    "Ambiente y Desarrollo Sostenible",
+    "Vivienda, Ciudad y Territorio",
+    "Transporte",
+    "Tecnologías de la Información y las Comunicaciones",
+    "Cultura",
+    "Deporte y Recreación",
+    "Inclusión Social y Reconciliación",
+    "Ciencia, Tecnología e Innovación",
+    "Justicia y del Derecho",
+    "Agua potable y saneamiento básico",
+    "Planeación",
+    "Otro"
+]
+
 # --- Helper function to get secrets ---
 def get_secret(key: str, default: str = "") -> str:
     """

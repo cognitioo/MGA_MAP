@@ -602,7 +602,7 @@ EXTRAE en formato JSON estricto:
         }}
     ],
     "datos_programa": {{
-        "codigos_programa": ["2402 - Nombre", "2403 - Nombre"],
+        "codigos_programa": ["(EXTRAE del documento POAI - NO uses ejemplos como 2402)"],
         "presupuestos": ["5,000,000,000 - Programa X"],
         "metas": ["100km vías", "500 beneficiarios"],
         "indicadores": ["Km construidos", "Familias atendidas"]

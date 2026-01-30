@@ -27,7 +27,7 @@ El documento sigue el formato oficial del DNP. Las secciones se adaptan según e
 2. **COMPLETITUD OBLIGATORIA (IMPORTANTE):**
    - ❌ **NUNCA DEJES CAMPOS VACÍOS.** El usuario NO quiere ver espacios en blanco.
    - ✅ **SI FALTA INFORMACIÓN:** ERES UN EXPERTO EN PROYECTOS. **GENERA** un valor realista, coherente y técnico basado en el nombre del proyecto y el municipio.
-   - Ejemplo: Si falta el "Programa", infiere uno lógico del Plan de Desarrollo (ej: "2402 - Infraestructura para el Desarrollo").
+   - Ejemplo: Si falta el "Programa", BÚSCALO en el POAI. ⚠️ NUNCA uses códigos de ejemplo como "2402" - solo usa los códigos REALES del documento POAI.
    - Ejemplo: Si falta la "Meta", estima una meta razonable (ej: "100% de ejecución").
 
 3. **REALISMO TÉCNICO:**
@@ -36,7 +36,7 @@ El documento sigue el formato oficial del DNP. Las secciones se adaptan según e
 
 4. **⚠️ REGLAS ESPECIALES:**
    - **BPIN:** SIEMPRE déjalo VACÍO - se asigna después de aprobación.
-   - **CÓDIGOS DE PROGRAMA:** Extrae del POAI (ej: "2402 - Infraestructura vial"). Sin código = no válido.
+   - **CÓDIGOS DE PROGRAMA:** ⚠️ EXTRAE los códigos EXACTOS del documento POAI (formato "XXXX - Nombre"). NUNCA uses "2402", "2302" ni ningún código de ejemplo.
    - **POBLACIÓN:** Usa NÚMEROS REALES (ej: 30104) de la tabla de proyección, NO porcentajes.
    - **NO COPIES** datos de otros proyectos (acueducto, subsidios, etc.) a menos que el proyecto actual sea de ese tipo.
 
@@ -93,7 +93,7 @@ RESPONDE CON JSON VÁLIDO:
     "pagina_2_plan_desarrollo": {{
         "plan_nacional": {{
             "nombre": "{plan_nacional}",
-            "programa": "BUSCA en el POAI la columna 'Código Programa Presupuestal' o 'Programa' y copia el código+nombre EXACTO (ej: '2302 - Fomento TIC'). NO INVENTES códigos.",
+            "programa": "BUSCA en el POAI la columna 'Código Programa Presupuestal' o 'Programa' y copia el código+nombre EXACTO. ⚠️ NO uses ejemplos como '2302' o '2402' - usa SOLO lo que encuentres en el POAI.",
             "transformacion": "Desarrollo Regional / Otro según proyecto",
             "pilar": "Infraestructura / Inclusión / Otro según proyecto",
             "catalizador": "Inversión en infraestructura / Otro según proyecto",
