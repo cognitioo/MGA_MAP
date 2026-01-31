@@ -97,7 +97,7 @@ class CertificacionesGenerator:
             "dia": str(now.day),
             "mes": self._get_month_name(now.month),
             "ano": str(now.year),
-            "context_dump": (data.get("context_dump", "No disponible") or "")[:3000]  # Truncate to avoid token limit
+            "context_dump": (data.get("context_dump", "No disponible") or "")[:50000]  # Increased limit for full POAI
         })
         
         # Parse JSON from response

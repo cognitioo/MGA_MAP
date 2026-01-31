@@ -92,7 +92,7 @@ class DTSGenerator:
             "cargo": data.get("cargo", "Secretario de Planeación Municipal"),
             "programa": data.get("programa", ""),
             "subprograma": data.get("subprograma", ""),
-            "context_dump": (data.get("context_dump", "No disponible") or "")[:3000]  # Truncate to avoid token limit
+            "context_dump": (data.get("context_dump", "No disponible") or "")[:50000]  # Increased limit for full POAI
         })
         
         # Parse JSON from response

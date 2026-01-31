@@ -108,7 +108,7 @@ class AnalisisSectorGenerator:
             "nombre_proyecto": data.get("nombre_proyecto", ""),
             "bpin": data.get("bpin", ""),
             "objeto": data.get("objeto", ""),
-            "sector": data.get("sector", "Consultoría Ambiental"),
+            "sector": data.get("sector", "Otro"),
             "codigo_ciiu": data.get("codigo_ciiu", "7110"),
             "codigos_unspsc": data.get("codigos_unspsc", ""),
             "valor_total": data.get("valor_total", ""),
@@ -116,7 +116,7 @@ class AnalisisSectorGenerator:
             "duracion": data.get("duracion", "90"),
             "responsable": data.get("responsable", ""),
             "cargo": data.get("cargo", "Secretario de Planeación Municipal"),
-            "context_dump": (data.get("context_dump", "No disponible") or "")[:3000]  # Truncate to avoid token limit
+            "context_dump": (data.get("context_dump", "No disponible") or "")[:50000]  # Increased limit for full POAI
         })
         
         # Parse JSON from response

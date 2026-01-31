@@ -64,22 +64,14 @@ class EstudiosPreviosGenerator:
             "marco_legal": "El Artículo 25 de la Ley 80 de 1993 establece los Estudios y Documentos Previos como requisito para la contratación.",
             "necesidad": "Se requiere la ejecución del proyecto para atender las necesidades identificadas en el municipio.",
             "objeto_alcance": "Realizar las actividades definidas en el convenio para cumplir con los objetivos del proyecto.",
-            "especificaciones": [
-                {"actividad": "Actividad 1", "descripcion": "Descripción de la actividad"},
-                {"actividad": "Actividad 2", "descripcion": "Descripción de la actividad"},
-            ],
+            "especificaciones": [],
             "obligaciones": {
-                "municipio": "• Proveer los recursos financieros comprometidos.<br>• Facilitar el acceso a la información.",
-                "empresa": "• Ejecutar las actividades técnicas descritas.<br>• Entregar los informes parciales y finales."
+                "municipio": "",
+                "empresa": ""
             },
             "fundamentos": "La contratación se enmarca en las disposiciones de la Ley 80 de 1993 y el Decreto 1082 de 2015.",
-            "riesgos": [
-                {"riesgo": "Retrasos en la ejecución", "probabilidad": "Media", "impacto": "Alto", "mitigacion": "Seguimiento periódico"},
-            ],
-            "presupuesto": [
-                {"nombre": "Honorarios", "descripcion": "Costos de personal", "porcentaje": "60%", "valor": ""},
-                {"nombre": "Operativos", "descripcion": "Gastos operacionales", "porcentaje": "40%", "valor": ""},
-            ],
+            "riesgos": [],
+            "presupuesto": [],
             "garantias": "Se exigirá garantía de cumplimiento equivalente al 10% del valor del contrato.",
             "plazo_lugar": "El plazo de ejecución será según lo establecido en el convenio.",
             "supervision": "La supervisión estará a cargo de un funcionario designado por la entidad contratante."
@@ -131,7 +123,7 @@ class EstudiosPreviosGenerator:
             "lugar": data.get("lugar", ""),
             "responsable": data.get("responsable", ""),
             "cargo": data.get("cargo", "Secretario de Planeación Municipal"),
-            "context_dump": (data.get("context_dump", "No disponible") or "")[:3000]  # Truncate to avoid token limit
+            "context_dump": (data.get("context_dump", "No disponible") or "")[:50000]  # Increased limit for full POAI
         })
         
         # Parse JSON from response
